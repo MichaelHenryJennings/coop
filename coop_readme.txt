@@ -1,17 +1,12 @@
 Specifications:
 
 All class members should be isolated into a struct
-Constructors and methods should be replaced 
+Constructors should be replaced with methods returning the struct 
+Methods should be replaced with methods taking the struct as a parameter 
 All references to class members inside the class should be prepended by "this." unless already the case
 Object declarations should be replaced by struct declarations
 Instance method calls (including constructions) should be replaced by calls to the appropriate function.
 Dot-operator prefixes of function calls should be shunted inside as the first argument.
-
-Notes:
-Keywords (should not be used elsewhere): class, this
-main() should not be declared inside a class.
-Class names cannot conflict with existing struct or function definitions
-Likewise, object names cannot conflict with existing struct instances 
 
 Hence,
 ---------------------------------------------------------------
@@ -74,4 +69,24 @@ int main() {
 	struct Rectangle s = halve(r, 1);
 	printf("%s: %i", string(s), s.area);
 }
+
 ---------------------------------------------------------------
+Notes:
+Keywords (should not be used elsewhere): class, this
+main() should not be declared inside a class.
+Class names cannot conflict with existing struct or function definitions
+Likewise, object names cannot conflict with existing struct instances or variable names
+Nested classes are currently not supported
+Classes must be declared before use
+
+Possible future features:
+Nested & function-internal classes
+Usage before declaration
+Cross-file class usage
+Bootstrapped compiler
+Error handling
+
+Efficiency notes:
+Is reading the entire file ahead of time necessary?
+Use buffered/optimized reader?
+Faster way to pattern match?
