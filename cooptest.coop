@@ -1,0 +1,28 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+class Rectangle(int width, int height, int area) {
+	Rectangle(int w, int h) {
+		width = w;
+		height = h;
+		area = width * height;
+	}
+	Rectangle halve(int axis) {
+		if (axis) {
+			return Rectangle(width, height/2);
+		} else {
+			return Rectangle(width/2, height);
+		}
+	}
+	char *string() {
+		char *string = malloc(100);
+		sprintf(string, "%i*%i", width, height);
+		return string;
+	}
+}
+int main() {
+	Rectangle r = Rectangle(10, 20);
+	Rectangle s = r.halve(1);
+	printf("%s: %i", s.string(), s.area);
+	return 0;
+}

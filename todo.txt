@@ -1,0 +1,6 @@
+track class names properly
+add "this" parameters
+handle parameters correctly (replace class types with "struct " + classname
+check for "this." before adding
+fix tabs
+reorganize code
