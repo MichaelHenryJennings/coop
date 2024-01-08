@@ -2,6 +2,7 @@
  * Author: Michael Henry Jennings
  * v0.0 (skeleton code and specifications): 1/2/2024
  * v0.1 (expanded specifications): 1/3/2024
+ * v0.2 (some features working): 1/7/2024
  */
 
 #include <stdio.h>
@@ -59,6 +60,16 @@ int count_instance_variables(char *text) {
 	return ++count;
 }
 
+int function(char *text) {
+	while (letter(*text)) {
+		text++;
+	}
+	while (isspace(*text)) {
+		text++;
+	}
+	return *text == '(';
+}
+
 int function_declaration(char *text) {
 	while (letter(*text)) {
 		text++;
@@ -75,7 +86,7 @@ int function_declaration(char *text) {
 	while (isspace(*text)) {
 		text++;
 	}
-	if (*(text++) != '{') {
+	if (*text != '{') {
 		return 0;
 	}
 	return 1;
@@ -103,6 +114,74 @@ int matches(char* text, char* pattern) {
 		}
 	}
 	return isspace(*text);
+}
+
+char* process_chain(char *text, FILE *file, char** instance_variables, int num_instance_variables) {
+	char *start = text;
+	char *vacancy = text;
+	int was_dot = 0;
+	while (letter(*text) || *text == '.' || *text == '(') {
+		if (*text == '.') {
+			was_dot = 1;
+		}
+		if (*(text++) == '(') {
+			if (was_dot) {
+				vacancy = text;
+			}
+			int counter = 1;
+			while (counter > 0) {
+				if (*text == '(') {
+					counter++;
+				}
+				if (*(text++) == ')') {
+					counter--;
+				}
+			}
+		}
+	}
+	char* function = vacancy;
+	while (*function != '.' && function >= start) {
+		function--;
+	}
+	char temp = *vacancy;
+	*vacancy = '\0';
+	fputs(++function, file);
+	*vacancy = temp;
+	if (function != start) {
+		temp = *(--function);
+		*function = '\0';
+		process_chain(start, file, instance_variables, num_instance_variables);
+		*function = temp;
+	} else {
+		char *word = read_word(start);
+		for (int j = 0; j < num_instance_variables; j++) {
+			if (!strcmp(word, instance_variables[j])) {
+				fputs(THIS, file);
+				fputc('.', file);
+			}
+		}
+		free(word);
+	}
+	while (isspace(*vacancy)) {
+		fputc(*(vacancy++), file);
+	}
+	if (*vacancy != ')' && vacancy != start) {
+		fputs(", ", file);
+	}
+	while (vacancy < text) {
+		if (*vacancy == '(') {
+			while (*vacancy != ')') {
+				if (letter(*vacancy)) {
+					vacancy = process_chain(vacancy, file, instance_variables, num_instance_variables);
+				} else {
+					fputc(*(vacancy++), file);
+				}
+			}
+		} else {
+			fputc(*(vacancy++), file);
+		}
+	}
+	return text;
 }
 
 int main(int argc, char *argv[]) {
@@ -135,33 +214,9 @@ int main(int argc, char *argv[]) {
 			char* cooptext = read(coopfile);
 			// scan entire file for coop syntax
 			while (*cooptext != '\0') {
-				if (!letter(*cooptext)) {
-					if (brace_level) {
-						if (*cooptext == '{') {
-							brace_level++;
-						} else if (*cooptext == '}') {
-							if (--brace_level == 0) {
-								for (int j = 0; j < num_instance_variables; j++) {
-									free(instance_variables[j]);
-								}
-								free(instance_variables);
-								num_instance_variables = 0;
-								classname = NULL;
-								cooptext++;
-								continue;
-							}
-							if (brace_level == 1 && in_constructor) {
-								fputs("return ", cfile);
-								fputs(THIS, cfile);
-								fputs(";\n", cfile);
-								in_constructor = 0;
-							}
-						}
-					}
-					fputc(*(cooptext++), cfile);
-				} else {
+				if (letter(*cooptext)) {
 					char *next_word = read_word(cooptext);
-					if (matches(cooptext, CLASS)) {
+					if (!strcmp(next_word, CLASS)) {
 						// found new class definition
 						cooptext += strlen(CLASS);
 						while (!letter(*cooptext)) {
@@ -169,11 +224,16 @@ int main(int argc, char *argv[]) {
 						}
 						// process class name
 						classname = read_word(cooptext);
+						if (classes_allocated == num_classes) {
+							classes = realloc(*classes, classes_allocated *= 2);
+						}
+						classes[num_classes] = classname;
+						num_classes++;
 						while (letter(*cooptext)) {
 							cooptext++;
 						}
 						while (*(cooptext++) != '(') {}
-						// process instance variables; write struct
+						// process instance variables; define struct
 						fputs(STRUCT, cfile);
 						fputc(' ', cfile);
 						fputs(classname, cfile);
@@ -206,12 +266,42 @@ int main(int argc, char *argv[]) {
 						}
 						brace_level++;
 					} else {
-						if (brace_level) {
-							if (function_declaration(cooptext)) {
+						int match = 0;
+						if (!function(cooptext)) {
+							fflush(stderr);
+							for (int i = 0; i < num_classes; i++) {
+								if (!strcmp(next_word, classes[i])) {
+									fputs(STRUCT, cfile);
+									fputc(' ', cfile);
+									match++;
+									break;
+								}
+							}
+						}
+						if (brace_level && !match) {
+							if (function_declaration(cooptext) && brace_level == 1) {
 								if (strcmp(next_word, classname)) {
 									// handle instance method
 									fputs(next_word, cfile);
 									cooptext += strlen(next_word);
+									while (*cooptext != '(') {
+										fputc(*(cooptext++), cfile);
+									}
+									fputc(*(cooptext++), cfile);
+									fputs(STRUCT, cfile);
+									fputc(' ', cfile);
+									fputs(classname, cfile);
+									fputc(' ', cfile);
+									fputs(THIS, cfile);
+									while (isspace(*cooptext)) {
+										fputc(*(cooptext++), cfile);
+									}
+									if (*cooptext != ')') {
+										fputs(", ", cfile);
+									}
+									while (*cooptext != '{') {
+										fputc(*(cooptext++), cfile);
+									}
 								} else {
 									// handle constructor
 									fputs(STRUCT, cfile);
@@ -233,27 +323,37 @@ int main(int argc, char *argv[]) {
 									in_constructor = 1;
 								}
 							} else {
-								for (int j = 0; j < num_instance_variables; j++) {
-									if (!strcmp(next_word, instance_variables[j])) {
-										fputs(THIS, cfile);
-										fputc('.', cfile);
-									}
-								}
-								fputs(next_word, cfile);
-								cooptext += strlen(next_word);
+								cooptext = process_chain(cooptext, cfile, instance_variables, num_instance_variables);
 							}
 						} else {
-							for (int i = 0; i < num_classes; i++) {
-								if (!strcmp(next_word, classes[i])) {
-									fputs(STRUCT, cfile);
-									fputc(' ', cfile);
-								}
-							}
-							fputs(next_word, cfile);
-							cooptext += strlen(next_word);
+							cooptext = process_chain(cooptext, cfile, instance_variables, num_instance_variables);
 						}
 					}
 					free(next_word);
+				} else {
+					if (brace_level) {
+						if (*cooptext == '{') {
+							brace_level++;
+						} else if (*cooptext == '}') {
+							if (--brace_level == 0) {
+								for (int j = 0; j < num_instance_variables; j++) {
+									free(instance_variables[j]);
+								}
+								free(instance_variables);
+								num_instance_variables = 0;
+								classname = NULL;
+								cooptext++;
+								continue;
+							}
+							if (brace_level == 1 && in_constructor) {
+								fputs("return ", cfile);
+								fputs(THIS, cfile);
+								fputs(";\n", cfile);
+								in_constructor = 0;
+							}
+						}
+					}
+					fputc(*(cooptext++), cfile);
 				}
 			}
 			fclose(coopfile);

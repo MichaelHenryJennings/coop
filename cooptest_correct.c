@@ -1,3 +1,4 @@
+/*
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -31,3 +32,4 @@ int mainz() {
 	printf("%s: %i", string(s), s.area);
 	return 0;
 }
+*/

@@ -14,22 +14,22 @@ struct Rectangle this;
 		this.area = this.width * this.height;
 	return this;
 }
-	Rectangle halve(int axis) {
+	struct Rectangle halve(struct Rectangle this, int axis) {
 		if (axis) {
 			return Rectangle(this.width, this.height/2);
 		} else {
 			return Rectangle(this.width/2, this.height);
 		}
 	}
-	char *string() {
+	char *string(struct Rectangle this) {
 		char *string = malloc(100);
 		sprintf(string, "%i*%i", this.width, this.height);
 		return string;
 	}
 
 int main() {
-	Rectangle r = Rectangle(10, 20);
-	Rectangle s = r.halve(1);
-	printf("%s: %i", s.string(), s.area);
+	struct Rectangle r = Rectangle(10, 20);
+	struct Rectangle s = halve(r, 1);
+	printf("%s: %i", string(s), s.area);
 	return 0;
 }

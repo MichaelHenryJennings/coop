@@ -1,6 +1,9 @@
-track class names properly
-add "this" parameters
-handle parameters correctly (replace class types with "struct " + classname
+handle parameters correctly (replace class types with "struct " + classname)
+same as above but for instance variables of later classes
+precheck and declare classes and methods (allow usage before definition
+correctly ignore string literals and comments
 check for "this." before adding
 fix tabs
+fix (cross-file) memory leak
 reorganize code
+test code rigorously
